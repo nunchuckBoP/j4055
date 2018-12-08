@@ -37,27 +37,6 @@ class Sensor(object):
 
     #removed definitions of kevin to celsius & kevin to f
 
-    def read_sim(self):
-        # this method is the else of the IF for _on_data_
-        # it simulates the reading of the sensor
-        # for testing purposes
-
-        # random time from 0.25 to 5 seconds
-        t = random.randint(250, 5000) / 1000
-
-        # value - randome number from 300 to 400
-        # kelvin
-        value = random.randint(300, 400)
-
-        # sleep for the time to simulate
-        # reading on the bus
-        time.sleep(t)
-
-        # return the random simulated
-        # value
-        return value
-    # end read_sim
-
     def read(self):
         
         # get the current timestamp
@@ -71,34 +50,33 @@ class Sensor(object):
 
         # reads the data from the bus
         raw = bus.read_word_data(self.address, 0x07)
-        raw_bin = bin(raw)
+        
+        # sleep for a fraction of a second
+        time.sleep(0.01)
+        
+        # read the next address
+        raw2 = bus.read_word_data(self.address, 0x04)
+        
+        # emissivity correction coefficient
+        emissivity = raw2
 
         # read the time after reading data
         ts2 = time.time()
 
         #calculation of temperatures from data read
-        kelvin = raw * 0.02
-        kelvin = round(kelvin, 2)
-        celsius = (kelvin -273.15)
-        celsius = round(celsius, 2)
-        fahrenheit = celsius * 1.8 + 32
-        fahrenheit = round(fahrenheit, 2)
+        kelvin = round(raw * 0.02, 2)
+        celsius = round((kelvin - 273.15), 2)
+        fahrenheit = round((celsius * 1.8) + 32, 2)
         
         ddict['kelvin'] = kelvin       
         ddict['celsius'] = celsius
-        ddict['fahrenheit'] = fahrenheit 
-
-        # for debugging
-        #ddict['raw_bin'] = raw_bin
+        ddict['fahrenheit'] = fahrenheit
+        ddict['emissivity'] = emissivity
 
         # calculate the elapse time to read to this point
         ttr = ts2 - ts1
         
         # ttr is the time to read the data (removed from ddict printout)
-        # --- CJ NOTE --
-        # we need to use this outside the class, so I added back in
-        # you'll see why when you look at the on_data function in
-        # the main module
         ddict["ttr"] = ttr
 
         # this keeps the running ttr total

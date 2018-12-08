@@ -39,7 +39,7 @@
 #
 # import the class file. This file needs to be in the
 # same directory as this main_count.py file
-import I2CSensor_count
+import I2CSensor
 
 
 
@@ -49,10 +49,6 @@ SAMPLE_RATE = 0.00001
 
 # device address on i2c bus
 DEVICE_ADDRESS = 0x5a
-
-#new 12/6/2018
-#added definition of addresses in sensor where data can be read...
-DATA_ADDRESS = 0x07
 
 #Known addresses in MLX90614 sensor memory are:
 #observed object temperature data address is 0x07
@@ -82,7 +78,8 @@ def on_data(ddict):
     print_data = {
             'kelvin':ddict['kelvin'],
             'celsius':ddict['celsius'],
-            'fahrenheit':ddict['fahrenheit']
+            'fahrenheit':ddict['fahrenheit'],
+            'emissivity':ddict['emissivity']
         }
     
     # print the data
@@ -94,7 +91,7 @@ if __name__ == '__main__':
 
     # instantiates the I2CSensor class. When the data is read
     # from the sensor, the on_data method will be called.
-    sensor = I2CSensor_count.Sensor(address=DEVICE_ADDRESS, sim_mode=False, on_data=on_data)
+    sensor = I2CSensor.Sensor(address=DEVICE_ADDRESS, sim_mode=False, on_data=on_data)
 
     # loop forever - blocking call
     # use this method if you want constant readings.
@@ -112,29 +109,7 @@ if __name__ == '__main__':
     # READ DATA.---
     sensor.take_readings(reading_count=READING_COUNT, sample_rate=SAMPLE_RATE)
 
-    # what you had
-    #it prints this line with sum of read times
-    #print("finished reads, interval= %1.6f"% (totalttr))
-    # end main
-
-    # prints the total ttr (time to read)
-    #print("finished reads, total elasped read time in seconds = %s" % round(sensor.get_total_ttr(), 4))
-
     #comment out the above line and uncomment the one below
     #if you just want the total time printed
 
     print(" Total ttr %s" % round(sensor.get_total_ttr(), 4))
-
-    #use the uncomment line below to see raw_bin from I2CSensor line 89
-    #print(bin(raw))
-
-    # how python string substitution works is: "%s" within
-    # the string, then "%" followed by the variable.
-    # for example print("this is a %s substitution" % "valid")
-    # will print out "this is a valid substitution"
-    #--------------------------------------------------
-    # if there is more than one variable substitution,
-    # then the variables have to be inside a tuple. Like this
-    # print("first %s, then %s" % ("this", "that"))
-    # that will print out "first this, then that"
-    
