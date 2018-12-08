@@ -6,6 +6,7 @@ class Sensor(object):
         I2CSensor - general class for an I2CSensor
         Author: CJ (cj@neechsoft.com)
         Date: 11/28/2018
+        Job #: j4055 (Infrared temperature sensor)
         Constructor:
             address - hex address of the i2c sensor
             on_data - callback function when the data from the
@@ -30,7 +31,7 @@ class Sensor(object):
         if self.on_data != None:
             self.on_data(ddict)
         else:
-            print("data = %s, time = %s" % ())
+            print(ddict)
         # end if
     # end __on_data__()
 
@@ -65,37 +66,30 @@ class Sensor(object):
         # return dictionary
         ddict = {}
 
-        # read the actual data. This is hex data in Kelvin
-        if not self.sim_mode:
-            # initialize the bus
-            bus = smbus.SMBus(1)
+        # initialize the bus
+        bus = smbus.SMBus(1)
 
-            # reads the data from the bus
-            raw = bus.read_word_data(self.address, 0x07)
-            raw_bin = bin(raw)
+        # reads the data from the bus
+        raw = bus.read_word_data(self.address, 0x07)
+        raw_bin = bin(raw)
 
-            # read the time after reading data
-            ts2 = time.time() 
+        # read the time after reading data
+        ts2 = time.time()
 
+        #calculation of temperatures from data read
+        kelvin = raw * 0.02
+        kelvin = round(kelvin, 2)
+        celsius = (kelvin -273.15)
+        celsius = round(celsius, 2)
+        fahrenheit = celsius * 1.8 + 32
+        fahrenheit = round(fahrenheit, 2)
+        
+        ddict['kelvin'] = kelvin       
+        ddict['celsius'] = celsius
+        ddict['fahrenheit'] = fahrenheit 
 
-            #calculation of temperatures from data read
-            kelvin = raw * 0.02
-            kelvin = round(kelvin, 2)
-            celsius = (kelvin -273.15)
-            celsius = round(celsius, 2)
-            fahrenheit = celsius * 1.8 + 32
-            fahrenheit = round(fahrenheit, 2)
-            
-            ddict['kelvin'] = kelvin       
-            ddict['celsius'] = celsius
-            ddict['fahrenheit'] = fahrenheit 
-
-            # for debugging
-            #ddict['raw_bin'] = raw_bin
-        else:
-            # read the simulated data
-            data = self.read_sim()
-        # end if
+        # for debugging
+        #ddict['raw_bin'] = raw_bin
 
         # calculate the elapse time to read to this point
         ttr = ts2 - ts1
