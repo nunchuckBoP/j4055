@@ -79,7 +79,8 @@ def on_data(ddict):
             'kelvin':ddict['kelvin'],
             'celsius':ddict['celsius'],
             'fahrenheit':ddict['fahrenheit'],
-            'emissivity':ddict['emissivity']
+            'emissivity':ddict['emissivity'],
+            'ambient':ddict['ambient']
         }
     
     # print the data

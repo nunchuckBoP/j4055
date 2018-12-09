@@ -56,12 +56,22 @@ class Sensor(object):
         
         # read the next address
         raw2 = bus.read_word_data(self.address, 0x04)
-        
+
         # emissivity correction coefficient
         # the raw value comes in as 70-75 so is
         # it raw / 100?
         emissivity = raw2 * 0.01
+        
+        # sleep for a fraction of a second to read
+        # the next data address
+        time.sleep(0.01)
 
+        # read the ambient temp
+        ambient_raw = bus.read_word_data(self.address, 0x06)
+
+        # convert ambient
+        ambient = round((ambient_raw * 0.02) - 273.75, 2)
+        
         # read the time after reading data
         ts2 = time.time()
 
@@ -74,6 +84,7 @@ class Sensor(object):
         ddict['celsius'] = celsius
         ddict['fahrenheit'] = fahrenheit
         ddict['emissivity'] = emissivity
+        ddict['ambient'] = ambient
 
         # calculate the elapse time to read to this point
         ttr = ts2 - ts1
