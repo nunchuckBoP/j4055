@@ -60,12 +60,14 @@ class Sensor(object):
         time.sleep(self.read_interval)
         
         # read the next address
-        raw2 = bus.read_word_data(self.address, 0x04)
+        raw2 = bus.read_word_data(self.address, 0x24)
 
         # emissivity correction coefficient
-        # the raw value comes in as 70-75 so is
-        # it raw / 100?
-        emissivity = raw2 * 0.01
+        # from the data sheet emissivity = 65535 * E
+        # so I think we have to divid out the 65535. If
+        # the emissivity drops below 1.0 we will catch
+        # it.
+        emissivity = raw2 / 65535
         
         # sleep for a fraction of a second to read
         # the next data address
