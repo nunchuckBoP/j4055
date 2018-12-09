@@ -21,6 +21,11 @@ class Sensor(object):
          self.on_data = on_data
          self.sim_mode = sim_mode
          self.total_ttr = 0
+
+         # I found this in the documentation
+         # so we will put this in just to be
+         # safe.
+         self.read_interval = 1.44 / 1000
     # end of __init__
 
     def __on_data__(self, ddict):
@@ -52,7 +57,7 @@ class Sensor(object):
         raw = bus.read_word_data(self.address, 0x07)
         
         # sleep for a fraction of a second
-        time.sleep(0.01)
+        time.sleep(self.read_interval)
         
         # read the next address
         raw2 = bus.read_word_data(self.address, 0x04)
@@ -64,7 +69,7 @@ class Sensor(object):
         
         # sleep for a fraction of a second to read
         # the next data address
-        time.sleep(0.01)
+        time.sleep(self.read_interval)
 
         # read the ambient temp
         ambient_raw = bus.read_word_data(self.address, 0x06)
