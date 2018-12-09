@@ -58,7 +58,9 @@ class Sensor(object):
         raw2 = bus.read_word_data(self.address, 0x04)
         
         # emissivity correction coefficient
-        emissivity = raw2
+        # the raw value comes in as 70-75 so is
+        # it raw / 100?
+        emissivity = raw2 * 0.01
 
         # read the time after reading data
         ts2 = time.time()
