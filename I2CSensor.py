@@ -113,15 +113,17 @@ class Sensor(object):
 
         # celsius calculation
         if decimal_places != None:
-            c = round(kelvin_value - 273.15, 2)
-            f = round((c * 1.8) + 32, 2)
+            c = round(kelvin_value - 273.15, decimal_places)
+            f = round((c * 1.8) + 32, decimal_places)
+            k = round(kelvin_value, decimal_places)
         else:
             c = kelvin_value - 273.15
             f = (c * 1.8) + 32
+            k = kelvin_value
         # end if
 
         tdict = {
-            'kelvin':kelvin_value,
+            'kelvin':k,
             'celcius':c,
             'fahrenheit': f
         }
