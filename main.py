@@ -108,4 +108,6 @@ if __name__ == '__main__':
     print("----------------------------------------------------")
     print(" Max TTR %s" % sensor.get_max_ttr())
     print("----------------------------------------------------")
+    print(" Max Object Temperature %s" % sensor.get_max_object_temp())
+    print("----------------------------------------------------")
     print("done.")

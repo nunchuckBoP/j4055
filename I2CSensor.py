@@ -39,6 +39,12 @@ class Sensor(object):
         self.max_ttr = 0
         self.max_ttr_meta = {}
 
+        # maximum object temperature class
+        # variables. The decimal variable is in
+        # kelvin.
+        self.max_object_temp = 0
+        self.max_object_temp_meta = {}
+
         # hard-coded data registers for the 
         # type of sensor. This should be consistent
         # if there is more than one sensor on the
@@ -93,6 +99,10 @@ class Sensor(object):
     def get_max_ttr(self):
         return self.max_ttr_meta
     # end get_max_ttr()
+
+    def get_max_object_temp(self):
+        return self.max_object_temp_meta
+    # end of get_max_object_temp
 
     def __on_data__(self, ddict):
         # if there is a callback function, we will
@@ -186,6 +196,19 @@ class Sensor(object):
             # in the datasheet
             real_value = raw_data * 0.02
 
+            # compare the kelvin value to the max
+            # temperature. if it is higher, update
+            # the max temp class variable
+            if real_value > self.max_object_temp:
+
+                # update the class variable
+                self.max_object_temp = real_value
+
+                # save the meta data for the reading
+                self.max_object_temp_meta = {"object":self.convert_temp(real_value),
+                                             "ttr":ttr}
+            # end if
+
             # returns the data object dictionary
             return {"object":self.convert_temp(real_value), "ttr":ttr}
 
@@ -240,6 +263,13 @@ class Sensor(object):
         # program access the reported data.
         self.__on_data__(ambient_data)
 
+        # take the emissivity reading
+        emissivity_data = self.read_emissivity()
+
+        # fire the on_data event so the main routine
+        # can print the data
+        self.__on_data__(emissivity_data)
+
         # begin the infinite loop
         while True:    
 
@@ -248,7 +278,6 @@ class Sensor(object):
 
             # take the readings
             ddict['object'] = self.read_temperature("object")
-            ddict['emissivity'] = self.read_emissivity()
             
             # time to sleep. Since we build in a defualt time
             # between readings based off of the datasheet. We
@@ -275,6 +304,13 @@ class Sensor(object):
         # we call the on_data event to let the main
         # program access the reported data.
         self.__on_data__(ambient_data)
+        
+        # take the emissivity reading
+        emissivity_data = self.read_emissivity()
+
+        # fire the on_data event so the main routine
+        # can print the data
+        self.__on_data__(emissivity_data)
 
         for i in range(0, reading_count):
 
@@ -283,7 +319,6 @@ class Sensor(object):
 
             # take the readings
             ddict['object'] = self.read_temperature("object")
-            ddict['emissivity'] = self.read_emissivity()
 
             # time to sleep. Since we build in a defualt time
             # between readings based off of the datasheet. We
