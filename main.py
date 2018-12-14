@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     # instantiates the I2CSensor class. When the data is read
     # from the sensor, the on_data method will be called.
-    sensor = I2CSensor.Sensor(address=DEVICE_ADDRESS, sim_mode=False, bus=None, on_data=on_data)
+    sensor = I2CSensor.Sensor(address=DEVICE_ADDRESS, bus=None, on_data=on_data)
 
     # loop forever - blocking call
     # use this method if you want constant readings.
@@ -94,13 +94,11 @@ if __name__ == '__main__':
     # ---COMMENT THIS OUT IF YOU WANT TO CONTINUOUSLY
 
 
-    # READ THE AMBIENT DATA
-    print(sensor.read_ambient(2))
-
-    # READ OTHER DATA.---
+    # READ DATA.---
     sensor.take_readings(reading_count=READING_COUNT, sample_rate=SAMPLE_RATE)
 
     #comment out the above line and uncomment the one below
     #if you just want the total time printed
 
     print(" Total ttr %s" % round(sensor.get_total_ttr(), 4))
+    print(" Max TTR %s" % sensor.get_max_ttr())
