@@ -95,10 +95,17 @@ if __name__ == '__main__':
 
 
     # READ DATA.---
+    print("----------------------------------------------------")
+    print(" Starting to read data...")
+    print("----------------------------------------------------")
     sensor.take_readings(reading_count=READING_COUNT, sample_rate=SAMPLE_RATE)
 
     #comment out the above line and uncomment the one below
     #if you just want the total time printed
 
+    print("----------------------------------------------------")
     print(" Total ttr %s" % round(sensor.get_total_ttr(), 4))
+    print("----------------------------------------------------")
     print(" Max TTR %s" % sensor.get_max_ttr())
+    print("----------------------------------------------------")
+    print("done.")

@@ -37,7 +37,7 @@ class Sensor(object):
         # containing the information on the max
         # ttr reading
         self.max_ttr = 0
-        self.max_ttr_meta
+        self.max_ttr_meta = {}
 
         # hard-coded data registers for the 
         # type of sensor. This should be consistent
@@ -153,12 +153,18 @@ class Sensor(object):
         # gets the time to read
         ttr = ts2 - ts1
 
+        # updates the total ttr
+        self.total_ttr = self.total_ttr + ttr
+
         # if reading this address is longer
         # than the max - update it to this
         # ttr value
         if ttr > self.max_ttr:
             self.max_ttr = ttr
-            self.max_ttr_meta = {'max ttr':self.max_ttr, 'device address':self.i2c_address, 'data address':address, 'name':name}
+            self.max_ttr_meta = {'max ttr':self.max_ttr,
+                                 'device address':hex(self.i2c_address),
+                                 'data address':hex(address),
+                                 'name':name}
         # end if
 
         # sleep for the given period. if the data is read faster
@@ -170,10 +176,11 @@ class Sensor(object):
     # end read_address
 
     def read_temperature(self, name):
+        
         if name == 'object':
             
             # reads the raw data
-            (raw_data, ttr) = self.read_address(self.object_address)
+            (raw_data, ttr) = self.read_address(self.object_address, name)
 
             # converts the value from the conversion
             # in the datasheet
@@ -185,7 +192,7 @@ class Sensor(object):
         elif name == 'ambient':
             
             # reads the raw data
-            (raw_data, ttr) = self.read_address(self.ambient_address)
+            (raw_data, ttr) = self.read_address(self.ambient_address, name)
 
             # converts the value from the conversion
             # in the datasheet
@@ -200,7 +207,7 @@ class Sensor(object):
 
     def read_emissivity(self):
         # gets the raw value for the object
-        raw_value = self.read_address(self.emissivity_address)
+        (raw_value, ttr) = self.read_address(self.emissivity_address, 'emissivity')
 
         # real value is the converted value based on the
         # data sheet for the data at that address
@@ -210,7 +217,7 @@ class Sensor(object):
             real_value = raw_value / 65535
         # end if
 
-        return real_value
+        return {"emissivity":real_value, "ttr":ttr}
     # end of read_emissivity
 
     def loop_forever(self, sample_rate=0.25):
@@ -225,7 +232,15 @@ class Sensor(object):
         """        
         # initialize total ttr
         self.reset_total_ttr()
-        
+
+        # take the ambient reading first.
+        ambient_data = self.read_temperature('ambient')
+
+        # we call the on_data event to let the main
+        # program access the reported data.
+        self.__on_data__(ambient_data)
+
+        # begin the infinite loop
         while True:    
 
             # initialize the data dictionary
@@ -238,9 +253,11 @@ class Sensor(object):
             # time to sleep. Since we build in a defualt time
             # between readings based off of the datasheet. We
             # will subtract this time from the sample rate. Because
-            # we already slept that long on the last reading
+            # we already slept that long on the last reading            
             sleep_time = sample_rate - self.read_interval
-            time.sleep(sleep_time)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            # end if
 
             self.__on_data__(ddict)
         # end while
@@ -252,8 +269,12 @@ class Sensor(object):
         # gets called more than once
         self.reset_total_ttr()
 
-        # take the ambient reading first
-        self.__on_data__(self.read_temperature('ambient'))
+        # take the ambient reading first.
+        ambient_data = self.read_temperature('ambient')
+
+        # we call the on_data event to let the main
+        # program access the reported data.
+        self.__on_data__(ambient_data)
 
         for i in range(0, reading_count):
 
@@ -269,7 +290,9 @@ class Sensor(object):
             # will subtract this time from the sample rate. Because
             # we already slept that long on the last reading
             sleep_time = sample_rate - self.read_interval
-            time.sleep(sleep_time)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            # end if
 
             self.__on_data__(ddict)
         # end for
