@@ -277,7 +277,7 @@ class Sensor(object):
             ddict = {}
 
             # take the readings
-            ddict['object'] = self.read_temperature("object")
+            object_data = self.read_temperature("object")
             
             # time to sleep. Since we build in a defualt time
             # between readings based off of the datasheet. We
@@ -288,7 +288,7 @@ class Sensor(object):
                 time.sleep(sleep_time)
             # end if
 
-            self.__on_data__(ddict)
+            self.__on_data__(object_data)
         # end while
     # end loop_forever
 
@@ -318,7 +318,7 @@ class Sensor(object):
             ddict = {}
 
             # take the readings
-            ddict['object'] = self.read_temperature("object")
+            object_data = self.read_temperature("object")
 
             # time to sleep. Since we build in a defualt time
             # between readings based off of the datasheet. We
@@ -329,7 +329,7 @@ class Sensor(object):
                 time.sleep(sleep_time)
             # end if
 
-            self.__on_data__(ddict)
+            self.__on_data__(object_data)
         # end for
     # end take_readings
 
