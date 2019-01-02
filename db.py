@@ -22,6 +22,7 @@ class Interface(threading.Thread):
         self.connection = None
         self.data_queue = []
         self.running = False
+        self.broken_connection = False
 
         # connection status to the server
         self.__connected__ = False
@@ -156,7 +157,7 @@ class Interface(threading.Thread):
         
         while self.running:
             
-            if self.__connected__ == False:
+            if self.__connected__ == False and self.broken_connection == False:
                 # connect to the database
                 self.__connect__()
             # end if
@@ -165,99 +166,98 @@ class Interface(threading.Thread):
 
                 print("db connected = %s" % self.__connected__)
 
-                # gets the first reading in the queue
-                a_reading = self.data_queue[0]
+                if self.data_queue.__len__() > 0:
+
+                    # gets the first reading in the queue
+                    a_reading = self.data_queue[0]
                 
-                # process the reading
+                    # process the reading
             
-                # first, get the id of the reading. This should
-                # be the last database index in the table. So, for
-                # this we need to query the db for the latest index
-                # value.
-                if a_reading.has_id() == False:
+                    # first, get the id of the reading. This should
+                    # be the last database index in the table. So, for
+                    # this we need to query the db for the latest index
+                    # value.
                     a_reading.set_id(self.__get_reading_id__(True))
-                # end if
-
-                # insert the reading into the reading table
-                self.__insert_reading__(a_reading)
                 
-                if type(a_reading.get_data()) is type(model.Temperature):
+                    # insert the reading into the reading table
+                    self.__insert_reading__(a_reading)
+                
+                    if type(a_reading.get_data()) is type(model.Temperature):
                     
-                    # insert temperature into temperature table
-                    self.__insert_temperature__(a_reading.id, a_reading.get_data())
+                        # insert temperature into temperature table
+                        self.__insert_temperature__(a_reading.id, a_reading.get_data())
                     
-                elif type(a_reading.get_data()) is type(model.Emissivity):
+                    elif type(a_reading.get_data()) is type(model.Emissivity):
                 
-                    # insert emissivity into emissivity table
-                    self.__insert_emissivity__(a_reading.id, a_reading.get_data())
+                        # insert emissivity into emissivity table
+                        self.__insert_emissivity__(a_reading.id, a_reading.get_data())
                 
-                # end if
+                    # end if
 
-                # pop the record off of the queue
-                self.data_queue.pop(0)
-                
-                # check the length of the queue - if it is empty,
-                # stop running
-                if self.data_queue.__len__() == 0:
-                    print("data queue empty.")
-                    self.running = False
+                    # pop the record off of the queue
+                    self.data_queue.pop(0)
+                else:
+                    # this is there are no more records
+                    # in the data queue
+                    pass
                 # end if
+                
             else:
+                # this happens if the server is not connnected
                 connection_attempts = connection_attempts + 1
                 if connection_attempts >= 3:
-                    self.kill()
+                    self.broken_connection = True
                 # end if
             # end if
         # end while loop
-             
+        
         # if there is no more data to log, disconnect from the server
         if self.__connected__:
             self.__disconnect__()
-        # end if
-        
+        # end if        
     # end of run
 # end of class
 
-if __name__ == '__main__':
-
-    import sensitive_info
-
-    mysql_host = sensitive_info.MYSQL_HOST
-    mysql_database = sensitive_info.MYSQL_DATABASE
-    mysql_username = sensitive_info.MYSQL_USERNAME
-    mysql_password = sensitive_info.MYSQL_PASSWORD
-
-    interface = Interface(mysql_host, mysql_database, mysql_username, mysql_password)
-
-    # timestamp
-    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    device_address = 0x67
-    ambient_address = 0x24
-    emissivity_address = 0x25
-    object_address = 0x21
-
-    # this is a test main that will seed the database
-    reading1 = model.Reading("ambient", device_address, ambient_address, 0.002, 273.03, ts, model.Temperature(273.03))
-
-    # add the reading to the database
-    interface.add_reading(reading1)
-
-    reading2 = model.Reading("emissivity", device_address, emissivity_address, 0.002, 1.00, ts, model.Emissivity(1.00))
-    interface.add_reading(reading2)
-    
-    for i in range(0, 99):
-        # this is a test main that will seed the database
-        reading = model.Reading("object", device_address, object_address, 0.0001, 273.03, ts, model.Temperature(273.03))
-        interface.add_reading(reading)
-    # end for
-
-    # lets perform a while loop just to be sure the 
-    # mysql grunt work is on a different thread.
-    for i in range(0, 100):
-        print("sleeping %s of 100" % i)
-        time.sleep(0.5)
-    # end for
-
-    print("done.")
-# end main
+##if __name__ == '__main__':
+##
+##    import sensitive_info
+##
+##    mysql_host = sensitive_info.MYSQL_HOST
+##    mysql_database = sensitive_info.MYSQL_DATABASE
+##    mysql_username = sensitive_info.MYSQL_USERNAME
+##    mysql_password = sensitive_info.MYSQL_PASSWORD
+##
+##    interface = Interface(mysql_host, mysql_database, mysql_username, mysql_password)
+##
+##    # timestamp
+##    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+##
+##    device_address = 0x67
+##    ambient_address = 0x24
+##    emissivity_address = 0x25
+##    object_address = 0x21
+##
+##    # this is a test main that will seed the database
+##    reading1 = model.Reading("ambient", device_address, ambient_address, 0.002, 273.03, ts, model.Temperature(273.03))
+##
+##    # add the reading to the database
+##    interface.add_reading(reading1)
+##
+##    reading2 = model.Reading("emissivity", device_address, emissivity_address, 0.002, 1.00, ts, model.Emissivity(1.00))
+##    interface.add_reading(reading2)
+##    
+##    for i in range(0, 99):
+##        # this is a test main that will seed the database
+##        reading = model.Reading("object", device_address, object_address, 0.0001, 273.03, ts, model.Temperature(273.03))
+##        interface.add_reading(reading)
+##    # end for
+##
+##    # lets perform a while loop just to be sure the 
+##    # mysql grunt work is on a different thread.
+##    for i in range(0, 100):
+##        print("sleeping %s of 100" % i)
+##        time.sleep(0.5)
+##    # end for
+##
+##    print("done.")
+### end main
