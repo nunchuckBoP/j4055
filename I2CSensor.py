@@ -1,6 +1,7 @@
 import time
 import smbus
 import random
+import model
 class Sensor(object):
     """
         I2CSensor - general class for an I2CSensor
@@ -18,11 +19,6 @@ class Sensor(object):
     """
     def __init__(self, address, decimal_places=2, bus=None, on_data=None):
         
-        # decimal places is for readout
-        # of the data. -1 decimal places is leave the 
-        # values unrounded.
-        self.decimal_places = decimal_places
-
         # i2c bus address of device
         self.i2c_address = address
 
@@ -37,13 +33,13 @@ class Sensor(object):
         # containing the information on the max
         # ttr reading
         self.max_ttr = 0
-        self.max_ttr_meta = {}
+        self.max_ttr_reading = None
 
         # maximum object temperature class
         # variables. The decimal variable is in
         # kelvin.
         self.max_object_temp = 0
-        self.max_object_temp_meta = {}
+        self.max_object_temp_reading = None
 
         # hard-coded data registers for the 
         # type of sensor. This should be consistent
@@ -69,7 +65,11 @@ class Sensor(object):
         # end if
     # end of __init__
 
-    def get_total_ttr(self, reset=False):
+    def add_ttr(self, ttr):
+        self.total_ttr = self.total_ttr + ttr
+    # end of add_ttr
+
+    def get_total_ttr(self):
 
         # this method simply returns the
         # running total. if the reset parameter
@@ -79,12 +79,6 @@ class Sensor(object):
         # buffer the total ttr so we
         # can return it
         ttr = self.total_ttr
-
-        # if reset is specified, then call
-        # the reset method
-        if reset:
-            self.reset_total_ttr()
-        # end if
 
         # returns the class variable
         return ttr
@@ -97,11 +91,11 @@ class Sensor(object):
     # end of reset_total_ttr
 
     def get_max_ttr(self):
-        return self.max_ttr_meta
+        return self.max_ttr_reading
     # end get_max_ttr()
 
     def get_max_object_temp(self):
-        return self.max_object_temp_meta
+        return self.max_object_temp_reading
     # end of get_max_object_temp
 
     def __on_data__(self, ddict):
@@ -118,34 +112,7 @@ class Sensor(object):
 
     #removed definitions of kevin to celsius & kevin to f
 
-    def convert_temp(self, kelvin_value):
-        # this method converts a kelvin
-        # temperature to celcius and fahrenheit
-        # and returns it in a dictionary. If decimal_places
-        # is specified, it will round the value to that amount
-        # of decimal places.
-
-        # celsius calculation
-        if self.decimal_places != None:
-            c = round(kelvin_value - 273.15, self.decimal_places)
-            f = round((c * 1.8) + 32, self.decimal_places)
-            k = round(kelvin_value, self.decimal_places)
-        else:
-            c = kelvin_value - 273.15
-            f = (c * 1.8) + 32
-            k = kelvin_value
-        # end if
-
-        tdict = {
-            'kelvin':k,
-            'celcius':c,
-            'fahrenheit': f
-        }
-
-        return tdict
-    # end kelvin_to_celsius
-
-    def read_address(self, address, name=None):
+    def read_device(self, address, name=None, conversion=1.0, data_type="temperature"):
         # this method will do the grunt
         # reading of the address and
         # return back the raw value. It also
@@ -163,18 +130,26 @@ class Sensor(object):
         # gets the time to read
         ttr = ts2 - ts1
 
-        # updates the total ttr
-        self.total_ttr = self.total_ttr + ttr
+        # adds the ttr to the total ttr
+        self.add_ttr(ttr)
 
-        # if reading this address is longer
-        # than the max - update it to this
-        # ttr value
+        # instatiates the reading object
+        reading = model.Reading(name, self.i2c_address, address, ttr, raw)
+
+        # sets the data on the reading
+        if data_type = "temperature":
+            reading.set_data(model.Temperature(raw * conversion))
+        elif data_type = "emissivity":
+            reading.set_data(model.Emissivity(raw * conversion))
+        else:
+            print("ERROR: UNSUPPORTED DATA TYPE IN READ_DEVICE METHOD")
+        # end if
+
+        # keeps track of the max time to read value
+        # and data object that it occured at.
         if ttr > self.max_ttr:
             self.max_ttr = ttr
-            self.max_ttr_meta = {'max ttr':self.max_ttr,
-                                 'device address':hex(self.i2c_address),
-                                 'data address':hex(address),
-                                 'name':name}
+            self.max_ttr_reading = reading
         # end if
 
         # sleep for the given period. if the data is read faster
@@ -182,143 +157,53 @@ class Sensor(object):
         time.sleep(self.read_interval)
 
         # return the raw data value
-        return (raw, ttr)
+        return reading
     # end read_address
 
-    def read_temperature(self, name):
-        
-        if name == 'object':
-            
-            # reads the raw data
-            (raw_data, ttr) = self.read_address(self.object_address, name)
+    def take_readings(self, reading_count=None, sample_rate=0.25):
 
-            # converts the value from the conversion
-            # in the datasheet
-            real_value = raw_data * 0.02
-
-            # compare the kelvin value to the max
-            # temperature. if it is higher, update
-            # the max temp class variable
-            if real_value > self.max_object_temp:
-
-                # update the class variable
-                self.max_object_temp = real_value
-
-                # save the meta data for the reading
-                self.max_object_temp_meta = {"object":self.convert_temp(real_value),
-                                             "ttr":ttr}
-            # end if
-
-            # returns the data object dictionary
-            return {"object":self.convert_temp(real_value), "ttr":ttr}
-
-        elif name == 'ambient':
-            
-            # reads the raw data
-            (raw_data, ttr) = self.read_address(self.ambient_address, name)
-
-            # converts the value from the conversion
-            # in the datasheet
-            real_value = raw_data * 0.02
-
-            # returns the data object dictionary
-            return {"ambient":self.convert_temp(real_value), "ttr":ttr}
-        else:
-            raise Exception("name not defined.")
-        # end if
-    # end of read_temp
-
-    def read_emissivity(self):
-        # gets the raw value for the object
-        (raw_value, ttr) = self.read_address(self.emissivity_address, 'emissivity')
-
-        # real value is the converted value based on the
-        # data sheet for the data at that address
-        if self.decimal_places != None:
-            real_value = round(raw_value / 65535, 2)
-        else:
-            real_value = raw_value / 65535
-        # end if
-
-        return {"emissivity":real_value, "ttr":ttr}
-    # end of read_emissivity
-
-    def loop_forever(self, sample_rate=0.25):
-        """
-            this method is a blocking method. This
-            should be called on the last night of the
-            main program because any code after will
-            not get executed. If a non-blocking function
-            is needed, a new thread will have to be
-            generated. Usually, I will start by inheriting
-            the thread class and daemonize it.
-        """        
-        # initialize total ttr
-        self.reset_total_ttr()
-
-        # take the ambient reading first.
-        ambient_data = self.read_temperature('ambient')
-
-        # we call the on_data event to let the main
-        # program access the reported data.
-        self.__on_data__(ambient_data)
-
-        # take the emissivity reading
-        emissivity_data = self.read_emissivity()
-
-        # fire the on_data event so the main routine
-        # can print the data
-        self.__on_data__(emissivity_data)
-
-        # begin the infinite loop
-        while True:    
-
-            # initialize the data dictionary
-            ddict = {}
-
-            # take the readings
-            object_data = self.read_temperature("object")
-            
-            # time to sleep. Since we build in a defualt time
-            # between readings based off of the datasheet. We
-            # will subtract this time from the sample rate. Because
-            # we already slept that long on the last reading            
-            sleep_time = sample_rate - self.read_interval
-            if sleep_time > 0:
-                time.sleep(sleep_time)
-            # end if
-
-            self.__on_data__(object_data)
-        # end while
-    # end loop_forever
-
-    def take_readings(self, reading_count, sample_rate=0.25):
+        # if reading_count = None, then it will loop 
+        # forever.
 
         # reinitialize total_ttr in case this methos
         # gets called more than once
         self.reset_total_ttr()
 
         # take the ambient reading first.
-        ambient_data = self.read_temperature('ambient')
+        ambient_reading = self.read_device(self.ambient_address, "ambient", 0.02, "temperature")
 
         # we call the on_data event to let the main
         # program access the reported data.
-        self.__on_data__(ambient_data)
+        self.__on_data__(ambient_reading)
         
         # take the emissivity reading
-        emissivity_data = self.read_emissivity()
+        emissivity_reading = self.read_device(self.emissivity_address, "emissivity", (1/65535), "emissivity")
 
         # fire the on_data event so the main routine
         # can print the data
-        self.__on_data__(emissivity_data)
+        self.__on_data__(emissivity_reading)
 
-        for i in range(0, reading_count):
+        # volitile boolean that will break the loop
+        # if set to false.
+        looping = True
 
-            # initialize the data dictionary
-            ddict = {}
+        # index local variable to keep track of how
+        # many iterations took place. If it gets to the read count
+        # then it will break the loop.
+        _index = 0
+        while looping:
 
             # take the readings
-            object_data = self.read_temperature("object")
+            object_reading = self.read_device(self.object_address, "object", 0.02, "temperature")
+
+            # keep track of the maximum object reading
+            if object_reading.get_data().get_kelvin() > self.max_object_temp:
+                self.max_object_temp = object_reading.get_data().get_kelvin()
+                self.max_object_temp_reading = object_reading
+            # end if
+
+            # this calls the on_data callback event
+            self.__on_data__(object_reading)
 
             # time to sleep. Since we build in a defualt time
             # between readings based off of the datasheet. We
@@ -329,8 +214,15 @@ class Sensor(object):
                 time.sleep(sleep_time)
             # end if
 
-            self.__on_data__(object_data)
+            # this code breaks out of the loop if a reading
+            # count is specified. 
+            if reading_count is not None:
+                if _index == reading_count - 1:
+                    looping = False
+                else:
+                    _index = _index + 1
+                # end if
+            # end if
         # end for
     # end take_readings
-
 # end of i2c sensor_count class

@@ -67,12 +67,14 @@ READING_COUNT = 100
 # on_data - callback method for the class
 # the output can be used for further processing
 # here.
-def on_data(ddict):
-    # prints out the data
-    # dictionary from the sensor.
+def on_data(data_reading):
+    # this is the callback for the on_data method
+    # of the class object. The method takes in a 
+    # model.reading class object.
+    print(data_reading)
 
-    # prints the contents in the dictionay
-    print(ddict)
+    # log the data to the MySQL server
+
 # end on_data
 
 if __name__ == '__main__':
