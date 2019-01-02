@@ -17,13 +17,18 @@ class Sensor(object):
             loop_forever - loops forever continuously reading the data
                            it also monitors the time it takes to read.
     """
-    def __init__(self, address, decimal_places=2, bus=None, on_data=None):
+    def __init__(self, address, bus=None,
+                 on_data=None, db_interface=None):
         
         # i2c bus address of device
         self.i2c_address = address
 
         # on data callback function
         self.on_data = on_data
+        
+        # series id - this is used for the
+        # database.
+        self.series_id = time.time()
 
         # total time to read class variable
         self.total_ttr = 0
@@ -63,6 +68,12 @@ class Sensor(object):
         else:
             self.bus = bus
         # end if
+
+        # this is the database interface class
+        # if an instance is detected then we will
+        # send the data on a reading.
+        self.db_interface = db_interface
+
     # end of __init__
 
     def add_ttr(self, ttr):
@@ -98,21 +109,29 @@ class Sensor(object):
         return self.max_object_temp_reading
     # end of get_max_object_temp
 
-    def __on_data__(self, ddict):
+    def __on_data__(self, aReading):
         # if there is a callback function, we will
         # call it without printing anything. if there
         # is not a callback specified, we will print
         # what we read.
         if self.on_data != None:
-            self.on_data(ddict)
+            self.on_data(aReading)
         else:
-            print(ddict)
+            print(aReading)
+        # end if
+
+        # if the database is not none, then
+        # there should be a good path to the
+        # db, and we will add it for logging
+        if self.db_interface is not None:
+            self.db_interface.add_reading(aReading)
         # end if
     # end __on_data__()
 
     #removed definitions of kevin to celsius & kevin to f
 
-    def read_device(self, address, name=None, conversion=1.0, data_type="temperature"):
+    def read_device(self, address, name=None, conversion=1.0,
+                    data_type="temperature"):
         # this method will do the grunt
         # reading of the address and
         # return back the raw value. It also
@@ -134,12 +153,13 @@ class Sensor(object):
         self.add_ttr(ttr)
 
         # instatiates the reading object
-        reading = model.Reading(name, self.i2c_address, address, ttr, raw)
+        reading = model.Reading(name, self.i2c_address, address,
+                                ttr, raw, self.series_id)
 
         # sets the data on the reading
-        if data_type = "temperature":
+        if data_type == "temperature":
             reading.set_data(model.Temperature(raw * conversion))
-        elif data_type = "emissivity":
+        elif data_type == "emissivity":
             reading.set_data(model.Emissivity(raw * conversion))
         else:
             print("ERROR: UNSUPPORTED DATA TYPE IN READ_DEVICE METHOD")

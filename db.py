@@ -7,7 +7,6 @@ import mysql.connector
 import model
 import threading
 import time
-import pickle
 from datetime import datetime
 
 class Interface(threading.Thread):
@@ -27,31 +26,23 @@ class Interface(threading.Thread):
         # connection status to the server
         self.__connected__ = False
 
-        # try and unpickle the reading index
-
-        # if it can't be unpickled then we set it
-        # to the default value of -1
-        try:
-            self.reading_index = pickle.loads("reading_index")
-        except Exception as ex:
-            self.reading_index = -1
-            print("could not unpickle reading_index variable exception: %s" % ex)
-        # end try
-
     # end of __init__()
 
     def __connect__(self):
-
         config = {
-                'user':self.username,
-                'password':self.password,
-                'host':self.server_ip,
-                'database':self.database
-            }
-
-        self.connection = mysql.connector.connect(**config)
-        self.cursor = self.connection.cursor()
-        self.__connected__ = True
+                    'user':self.username,
+                    'password':self.password,
+                    'host':self.server_ip,
+                    'database':self.database
+                 }
+        try:
+            print("connecting to database...")
+            self.connection = mysql.connector.connect(**config)
+            self.cursor = self.connection.cursor()
+            self.__connected__ = True
+        except Exception as ex:
+            print("DATABASE CONNECTION ERROR: %s" % ex)
+            self.__connected__ = False
     # end connect
 
     def __disconnect__(self):
@@ -59,14 +50,7 @@ class Interface(threading.Thread):
         self.cursor = None
 
         self.__connected__ = False
-
-        # pickle the reading index. That way
-        # we don't have to get it from the
-        # server every time.
-        if self.reading_index != -1:
-            print("pickling reading_index...")
-            pickle.dumps(self.reading_index)
-        # end if
+        
     # end disconnect
 
     def __execute_sql_command__(self, command_string, params=None, select=False):
@@ -156,54 +140,81 @@ class Interface(threading.Thread):
         # end if
     # end add_reading
 
+    def kill(self):
+        #print("db thread flagged for death.")
+        self.running = False
+    # end of kill()
+
     def run(self):
         self.running = True
 
-        while self.running:
+        #print("started db logging thread..")
 
+        # if we have to connect more than three times,
+        # we will have to give up.
+        connection_attempts = 0
+        
+        while self.running:
+            
             if self.__connected__ == False:
+                # connect to the database
                 self.__connect__()
             # end if
 
-            # gets the first reading in the queue
-            a_reading = self.data_queue[0]
-            
-            # process the reading
-            # insert reading into reading table
-            if a_reading.has_id() == False:
-                a_reading.set_id(self.__get_reading_id__(True))
-            # end if
+            if self.__connected__:
 
-            # insert the reading into the reading table
-            self.__insert_reading__(a_reading)
+                print("db connected = %s" % self.__connected__)
 
-            if type(a_reading.get_data()) is type(model.Temperature):
+                # gets the first reading in the queue
+                a_reading = self.data_queue[0]
                 
-                # insert temperature into temperature table
-                self.__insert_temperature__(a_reading.id, a_reading.get_data())
+                # process the reading
             
-            elif type(a_reading.get_data()) is type(model.Emissivity):
-            
-                # insert emissivity into emissivity table
-                self.__insert_emissivity__(a_reading.id, a_reading.get_data())
-            
-            # end if
+                # first, get the id of the reading. This should
+                # be the last database index in the table. So, for
+                # this we need to query the db for the latest index
+                # value.
+                if a_reading.has_id() == False:
+                    a_reading.set_id(self.__get_reading_id__(True))
+                # end if
 
-            # pop the record off of the queue
-            self.data_queue.pop(0)
+                # insert the reading into the reading table
+                self.__insert_reading__(a_reading)
+                
+                if type(a_reading.get_data()) is type(model.Temperature):
+                    
+                    # insert temperature into temperature table
+                    self.__insert_temperature__(a_reading.id, a_reading.get_data())
+                    
+                elif type(a_reading.get_data()) is type(model.Emissivity):
+                
+                    # insert emissivity into emissivity table
+                    self.__insert_emissivity__(a_reading.id, a_reading.get_data())
+                
+                # end if
 
-            # check the length of the queue - if it is empty,
-            # stop running
-            if self.data_queue.__len__() == 0:
-                self.running = False
+                # pop the record off of the queue
+                self.data_queue.pop(0)
+                
+                # check the length of the queue - if it is empty,
+                # stop running
+                if self.data_queue.__len__() == 0:
+                    print("data queue empty.")
+                    self.running = False
+                # end if
+            else:
+                connection_attempts = connection_attempts + 1
+                if connection_attempts >= 3:
+                    self.kill()
+                # end if
             # end if
         # end while loop
-
+             
         # if there is no more data to log, disconnect from the server
-        self.__disconnect__()
-
-        print("data queue empty.")
-
+        if self.__connected__:
+            self.__disconnect__()
+        # end if
+        
     # end of run
 # end of class
 

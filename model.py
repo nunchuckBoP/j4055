@@ -1,9 +1,15 @@
+# ########################################
+#
+# Model module
+# author: CJ (cj@neechsoft.com)
+# purpose: Model the datatypes of the system
+#
+############################################
+
 class Reading(object):
-    def __init__(self, name, device_address, data_address, ttr, raw_value, series_id, data=None, location_id=0):
-        
-        # this data could be useful down the line
-        # when there may be multiple devices attached
-        # to the database
+    def __init__(self, name, device_address, data_address, ttr,
+                 raw_value, series_id, location_id=0):
+    
         self.name = name
         self.device_address = device_address
         self.data_address = data_address
@@ -11,13 +17,9 @@ class Reading(object):
         self.series_id = series_id
         self.id = None
         self.location_id = location_id
-
-        # reading the data items
-        self.ttr = ttr
         self.data = None
-        if data is not None:
-            self.data = data
-        # end if
+        self.ttr = ttr
+        
     # end __init__()
 
     def has_id(self):
@@ -31,7 +33,7 @@ class Reading(object):
     def set_id(self, id):
         self.id = id
     # end set_id
-
+    
     def set_data(self, data):
         # this method overrites whatever
         # is in the data
@@ -48,7 +50,7 @@ class Reading(object):
     def __str__(self):
         # this is the method that gets called when it is "printed"
         _string = "name: %s    device address: %s    data address: %s    data: %s" % \
-            (self.name, self.device_address, self.data_address, self.get_data().__str__())
+            (self.name, hex(self.device_address), hex(self.data_address), self.get_data().__str__())
         return _string
 # end reading
 

@@ -39,9 +39,10 @@
 #
 # import the class file. This file needs to be in the
 # same directory as this main_count.py file
-import I2CSensor
-
-
+import i2c_sensor
+import mysql_config
+import db
+import time
 
 # program variables adjustable
 # sample rate in seconds
@@ -72,16 +73,18 @@ def on_data(data_reading):
     # of the class object. The method takes in a 
     # model.reading class object.
     print(data_reading)
-
-    # log the data to the MySQL server
-
 # end on_data
 
 if __name__ == '__main__':
 
+    # create the class that will interact with the database
+    db_interface = db.Interface(mysql_config.MYSQL_HOST, mysql_config.MYSQL_DATABASE,
+                                mysql_config.MYSQL_USERNAME, mysql_config.MYSQL_PASSWORD)
+
     # instantiates the I2CSensor class. When the data is read
     # from the sensor, the on_data method will be called.
-    sensor = I2CSensor.Sensor(address=DEVICE_ADDRESS, bus=None, on_data=on_data)
+    sensor = i2c_sensor.Sensor(address=DEVICE_ADDRESS, bus=None,
+                               on_data=on_data, db_interface=db_interface)
 
     # loop forever - blocking call
     # use this method if you want constant readings.
@@ -108,8 +111,34 @@ if __name__ == '__main__':
     print("----------------------------------------------------")
     print(" Total ttr %s" % round(sensor.get_total_ttr(), 4))
     print("----------------------------------------------------")
-    print(" Max TTR %s" % sensor.get_max_ttr())
+    print(" Max TTR %s" % sensor.get_max_ttr().ttr)
+    #print(" Max TTR READING %s" % sensor.get_max_ttr())
     print("----------------------------------------------------")
-    print(" Max Object Temperature %s" % sensor.get_max_object_temp())
+    print(" Max Object Temperature: %s C" % sensor.get_max_object_temp().get_data().get_celcius())
+    #print(" Max Object Temperature READING %s" % sensor.get_max_object_temp())
     print("----------------------------------------------------")
-    print("done.")
+
+    # loop and rest while the database
+    # class is processing readings.
+    try:
+        print("waiting for db thread to complete...")
+        buffer_size1 = db_interface.data_queue.__len__()
+        print("sql records to be logged: %s" % buffer_size1)
+        while db_interface.is_alive():
+            #print("db thread running..buffer length=%s" % db_interface.data_queue.__len__())
+            buffer_size2 = db_interface.data_queue.__len__()
+            if buffer_size2 < buffer_size1:
+                print("sql records to be logged: %s" % buffer_size2)
+                buffer_size1 = buffer_size2
+            # end if                
+            time.sleep(0.1)
+        # end while
+    except KeyboardInterrupt:
+        print("terminating db thread...could take up to 2 minutes for sql connection timeout. Output will appear regaurding thread termination.")
+        while db_interface.is_alive():
+            db_interface.kill()
+            time.sleep(0.1)
+        # end while
+    # end try
+
+    print("main thread complete.")
