@@ -7,17 +7,15 @@ import mysql.connector
 import model
 import threading
 import time
+import json
 from datetime import datetime
 
 class Interface(object):
 
-    def __init__(self, server_ip, database, username, password):
+    def __init__(self, config_file):
         super(Interface, self).__init__()
 
-        self.server_ip = server_ip
-        self.database = database
-        self.username = username
-        self.password = password
+        self.config_file = config_file
         self.cursor = None
         self.connection = None
         self.data_queue = []
@@ -32,14 +30,15 @@ class Interface(object):
     # end of __init__()
 
     def __connect__(self):
-        config = {
-                    'user':self.username,
-                    'password':self.password,
-                    'host':self.server_ip,
-                    'database':self.database
-                 }
+
+        # load the config file data
+        with open(self.config_file) as handle:
+            config = json.loads(handle.read())
+        # end with
+
         try:
             print("connecting to database...")
+            print("database configuration: %s" % config)
             self.connection = mysql.connector.connect(**config)
             self.cursor = self.connection.cursor()
             self.__connected__ = True
@@ -167,57 +166,58 @@ class Interface(object):
         
         while self.running:
             
-            if self.__connected__ == False and self.broken_connection == False:
-                # connect to the database
-                self.__connect__()
+            #if self.__connected__ == False and self.broken_connection == False:
+            #    # connect to the database
+            #    self.__connect__()
             # end if
+            while self.__connected__ == False:
+                if self.running:
+                    self.__connect__()
+                # end
+                if not self.__connected__:
+                    print("MYSQL SERVER CONNECTION ERROR, THREAD WAITING 20 SECONDS")
+                    time.sleep(20)
+                # end if
+            # end while
 
-            if self.__connected__:
+            # this will not execute unless the server
+            # gets connected
+            print("db connected = %s" % self.__connected__)
 
-                print("db connected = %s" % self.__connected__)
+            if self.data_queue.__len__() > 0:
 
-                if self.data_queue.__len__() > 0:
-
-                    # gets the first reading in the queue
-                    a_reading = self.data_queue[0]
+                # gets the first reading in the queue
+                a_reading = self.data_queue[0]
                 
-                    # process the reading
+                # process the reading
             
-                    # first, get the id of the reading. This should
-                    # be the last database index in the table. So, for
-                    # this we need to query the db for the latest index
-                    # value.
-                    a_reading.set_id(self.__get_reading_id__(True))
+                # first, get the id of the reading. This should
+                # be the last database index in the table. So, for
+                # this we need to query the db for the latest index
+                # value.
+                a_reading.set_id(self.__get_reading_id__(True))
                 
-                    # insert the reading into the reading table
-                    self.__insert_reading__(a_reading)
+                # insert the reading into the reading table
+                self.__insert_reading__(a_reading)
                 
-                    if type(a_reading.get_data()) is type(model.Temperature):
+                if type(a_reading.get_data()) is type(model.Temperature):
                     
-                        # insert temperature into temperature table
-                        self.__insert_temperature__(a_reading.id, a_reading.get_data())
+                    # insert temperature into temperature table
+                    self.__insert_temperature__(a_reading.id, a_reading.get_data())
                     
-                    elif type(a_reading.get_data()) is type(model.Emissivity):
+                elif type(a_reading.get_data()) is type(model.Emissivity):
                 
-                        # insert emissivity into emissivity table
-                        self.__insert_emissivity__(a_reading.id, a_reading.get_data())
+                    # insert emissivity into emissivity table
+                    self.__insert_emissivity__(a_reading.id, a_reading.get_data())
                 
-                    # end if
+                # end if
 
-                    # pop the record off of the queue
-                    self.data_queue.pop(0)
-                else:
-                    # this is there are no more records
-                    # in the data queue
-                    pass
-                # end if
-                
+                # pop the record off of the queue
+                self.data_queue.pop(0)
             else:
-                # this happens if the server is not connnected
-                connection_attempts = connection_attempts + 1
-                if connection_attempts >= 3:
-                    self.broken_connection = True
-                # end if
+                # this is there are no more records
+                # in the data queue
+                pass
             # end if
         # end while loop
         

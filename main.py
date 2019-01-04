@@ -40,7 +40,6 @@
 # import the class file. This file needs to be in the
 # same directory as this main_count.py file
 import i2c_sensor
-import mysql_config
 import db
 import time
 
@@ -78,8 +77,7 @@ def on_data(data_reading):
 if __name__ == '__main__':
 
     # create the class that will interact with the database
-    db_interface = db.Interface(mysql_config.MYSQL_HOST, mysql_config.MYSQL_DATABASE,
-                                mysql_config.MYSQL_USERNAME, mysql_config.MYSQL_PASSWORD)
+    db_interface = db.Interface("mysql_config.json")
 
     # instantiates the I2CSensor class. When the data is read
     # from the sensor, the on_data method will be called.
