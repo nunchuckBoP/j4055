@@ -170,7 +170,7 @@ class Interface(object):
             #    # connect to the database
             #    self.__connect__()
             # end if
-            while self.__connected__ == False:
+            while (self.__connected__ == False and self.running):
                 if self.running:
                     self.__connect__()
                 # end
