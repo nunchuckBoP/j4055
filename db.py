@@ -9,7 +9,7 @@ import threading
 import time
 from datetime import datetime
 
-class Interface(threading.Thread):
+class Interface(object):
 
     def __init__(self, server_ip, database, username, password):
         super(Interface, self).__init__()
@@ -23,6 +23,8 @@ class Interface(threading.Thread):
         self.data_queue = []
         self.running = False
         self.broken_connection = False
+        self.thread = threading.Thread(target=self.run)
+        self.new_thread_needed = False
 
         # connection status to the server
         self.__connected__ = False
@@ -137,7 +139,15 @@ class Interface(threading.Thread):
         # data queue and start logging into the database
         self.data_queue.append(a_reading)
         if not self.running:
-            self.start()
+
+            # if a new thread is needed, then we
+            # will recreate it.
+            if self.new_thread_needed:
+                self.thread = threading.Thread(target=self.run)
+            # end if
+
+            # start the thread
+            self.thread.start()
         # end if
     # end add_reading
 
@@ -214,7 +224,9 @@ class Interface(threading.Thread):
         # if there is no more data to log, disconnect from the server
         if self.__connected__:
             self.__disconnect__()
-        # end if        
+        # end if
+
+        self.new_thread_needed = True
     # end of run
 # end of class
 
