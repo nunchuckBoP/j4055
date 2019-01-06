@@ -73,7 +73,7 @@ class Interface(object):
                     return affected
             # end if
             
-            print("record processed.")
+            #print("record processed.")
             return ret
         
         except Exception as ex:
@@ -84,8 +84,9 @@ class Interface(object):
 
     def __get_reading_id__(self, from_db=True):
         if from_db or self.reading_index == -1:
-            sql_command = "SELECT id from ifmt.tbl_reading ORDER BY id desc LIMIT 1"
+            sql_command = "SELECT id from tbl_reading ORDER BY id desc LIMIT 1"
             data = self.__execute_sql_command__(sql_command, None, True)
+            #print("__get_reading_id__ = %s" % data)
             if data is not None and data.__len__() > 0:
                 return int(data[0][0]) + 1
             else:
@@ -182,7 +183,7 @@ class Interface(object):
 
             # this will not execute unless the server
             # gets connected
-            print("db connected = %s" % self.__connected__)
+            #print("db connected = %s" % self.__connected__)
 
             if self.data_queue.__len__() > 0:
 
@@ -195,7 +196,8 @@ class Interface(object):
                 # be the last database index in the table. So, for
                 # this we need to query the db for the latest index
                 # value.
-                a_reading.set_id(self.__get_reading_id__(True))
+                _reading_id = self.__get_reading_id__(True)
+                a_reading.set_id(_reading_id)
                 
                 # insert the reading into the reading table
                 self.__insert_reading__(a_reading)
@@ -217,7 +219,7 @@ class Interface(object):
             else:
                 # this is there are no more records
                 # in the data queue
-                pass
+                self.running = False
             # end if
         # end while loop
         

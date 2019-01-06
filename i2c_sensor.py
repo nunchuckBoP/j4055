@@ -28,7 +28,7 @@ class Sensor(object):
         
         # series id - this is used for the
         # database.
-        self.series_id = time.time()
+        self.series_id = None
 
         # total time to read class variable
         self.total_ttr = 0
@@ -181,6 +181,9 @@ class Sensor(object):
     # end read_address
 
     def take_readings(self, reading_count=None, sample_rate=0.25):
+
+        # this is where we need to set the series id
+        self.series_id = time.time()
 
         # if reading_count = None, then it will loop 
         # forever.

@@ -122,15 +122,17 @@ if __name__ == '__main__':
         print("waiting for db thread to complete...")
         buffer_size1 = db_interface.data_queue.__len__()
         print("sql records to be logged: %s" % buffer_size1)
+        print("logging...")
         while db_interface.thread.is_alive():
             #print("db thread running..buffer length=%s" % db_interface.data_queue.__len__())
             buffer_size2 = db_interface.data_queue.__len__()
             if buffer_size2 < buffer_size1:
-                print("sql records to be logged: %s" % buffer_size2)
+                #print("sql records to be logged: %s" % buffer_size2)
                 buffer_size1 = buffer_size2
             # end if                
             time.sleep(0.1)
         # end while
+        print("db thread complete.")
     except KeyboardInterrupt:
         print("terminating db thread...could take up to 2 minutes for sql connection timeout. Output will appear regaurding thread termination.")
         while db_interface.thread.is_alive():
