@@ -96,6 +96,15 @@ class Interface(object):
             self.reading_index = self.reading_index + 1
     # end get reading_id
 
+    def __insert_series__(self, aSeries):
+        sql_command_string = (
+                                "INSERT INTO tbl_series (id) "
+                                "VALUES(%s)"
+                            )
+        sql_command_parameters = (aSeries.get_id())
+        self.__execute_sql_command__(sql_command_string, sql_command_parameters, False)
+    # end __insert_series__()
+
     def __insert_reading__(self, aReading):
 
         # inserts the reading
@@ -134,12 +143,12 @@ class Interface(object):
         self.__execute_sql_command__(sql_command_string, sql_command_parameters, False)
     # end insert_emissivity
 
-    def add_reading(self, a_reading):
+    def add_data(self, data_object):
+        # data object can be: Series, Reading, Temperature, Emissivity, 
         # this is the method to add a reading into the
         # data queue and start logging into the database
-        self.data_queue.append(a_reading)
+        self.data_queue.append(data_object)
         if not self.running:
-
             # if a new thread is needed, then we
             # will recreate it.
             if self.new_thread_needed:
@@ -149,7 +158,7 @@ class Interface(object):
             # start the thread
             self.thread.start()
         # end if
-    # end add_reading
+    # end add_data
 
     def kill(self):
         #print("db thread flagged for death.")
@@ -187,31 +196,41 @@ class Interface(object):
 
             if self.data_queue.__len__() > 0:
 
-                # gets the first reading in the queue
-                a_reading = self.data_queue[0]
+                # gets the first data object in the queue
+                data_object = self.data_queue[0]
                 
                 # process the reading
             
-                # first, get the id of the reading. This should
-                # be the last database index in the table. So, for
-                # this we need to query the db for the latest index
-                # value.
-                _reading_id = self.__get_reading_id__(True)
-                a_reading.set_id(_reading_id)
+                # determine the type of data object
+                # can either be a series or reading
+
+                if type(data_object) is type(model.Series):
+
+                    # inserts the series data into the database
+                    self.__insert_series__(data_object)
+
+                else:
+                    # first, get the id of the reading. This should
+                    # be the last database index in the table. So, for
+                    # this we need to query the db for the latest index
+                    # value.
+                    _reading_id = self.__get_reading_id__(True)
+                    a_reading.set_id(_reading_id)
+
+                    # insert the reading into the reading table
+                    self.__insert_reading__(a_reading)
                 
-                # insert the reading into the reading table
-                self.__insert_reading__(a_reading)
-                
-                if type(a_reading.get_data()) is type(model.Temperature):
+                    if type(a_reading.get_data()) is type(model.Temperature):
+                        
+                        # insert temperature into temperature table
+                        self.__insert_temperature__(a_reading.id, a_reading.get_data())
                     
-                    # insert temperature into temperature table
-                    self.__insert_temperature__(a_reading.id, a_reading.get_data())
-                    
-                elif type(a_reading.get_data()) is type(model.Emissivity):
-                
-                    # insert emissivity into emissivity table
-                    self.__insert_emissivity__(a_reading.id, a_reading.get_data())
-                
+                    elif type(a_reading.get_data()) is type(model.Emissivity):
+                        
+                        # insert emissivity into emissivity table
+                        self.__insert_emissivity__(a_reading.id, a_reading.get_data())
+
+                    # end if
                 # end if
 
                 # pop the record off of the queue

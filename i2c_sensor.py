@@ -28,7 +28,7 @@ class Sensor(object):
         
         # series id - this is used for the
         # database.
-        self.series_id = None
+        self.series = None
 
         # total time to read class variable
         self.total_ttr = 0
@@ -124,7 +124,7 @@ class Sensor(object):
         # there should be a good path to the
         # db, and we will add it for logging
         if self.db_interface is not None:
-            self.db_interface.add_reading(aReading)
+            self.db_interface.add_data(aReading)
         # end if
     # end __on_data__()
 
@@ -154,7 +154,7 @@ class Sensor(object):
 
         # instatiates the reading object
         reading = model.Reading(name, self.i2c_address, address,
-                                ttr, raw, self.series_id)
+                                ttr, raw, self.series.get_id())
 
         # sets the data on the reading
         if data_type == "temperature":
@@ -183,10 +183,10 @@ class Sensor(object):
     def take_readings(self, reading_count=None, sample_rate=0.25):
 
         # this is where we need to set the series id
-        self.series_id = time.time()
+        self.series = model.Series(time.time())
 
-        # if reading_count = None, then it will loop 
-        # forever.
+        # add the series object in the data queue
+        self.db.add_data(self.series)
 
         # reinitialize total_ttr in case this methos
         # gets called more than once
@@ -238,7 +238,7 @@ class Sensor(object):
             # end if
 
             # this code breaks out of the loop if a reading
-            # count is specified. 
+            # count is specified.
             if reading_count is not None:
                 if _index == reading_count - 1:
                     looping = False

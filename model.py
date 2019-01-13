@@ -6,6 +6,15 @@
 #
 ############################################
 
+class Series(object):
+    def __init__(self, id):
+        self.id = id
+    # end __init__()
+    def get_id(self):
+        return self.id
+    # end get_id
+# end Series class
+
 class Reading(object):
     def __init__(self, name, device_address, data_address, ttr,
                  raw_value, series_id, location_id=0):
