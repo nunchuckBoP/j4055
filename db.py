@@ -97,12 +97,9 @@ class Interface(object):
     # end get reading_id
 
     def __insert_series__(self, aSeries):
-        sql_command_string = (
-                                "INSERT INTO tbl_series (id) "
-                                "VALUES(%s)"
-                            )
-        sql_command_parameters = (aSeries.get_id())
-        self.__execute_sql_command__(sql_command_string, sql_command_parameters, False)
+        sql_command_string = ("INSERT INTO tbl_series (id) VALUES(%s)" % aSeries.get_id())
+        
+        self.__execute_sql_command__(sql_command_string, None, False)
     # end __insert_series__()
 
     def __insert_reading__(self, aReading):
@@ -204,33 +201,43 @@ class Interface(object):
                 # determine the type of data object
                 # can either be a series or reading
 
-                if type(data_object) is type(model.Series):
+                if type(data_object) is model.Series:
 
-                    # inserts the series data into the database
-                    self.__insert_series__(data_object)
+                    # inserts the series data into the database. If we get an error
+                    # we need to break the thread.
+                    _inserted = self.__insert_series__(data_object)
+                    
+                    if _inserted is None:
 
-                else:
+                        # set the kill it
+                        self.running = False
+                        
+                    # end if
+
+                elif type(data_object) is model.Reading:
                     # first, get the id of the reading. This should
                     # be the last database index in the table. So, for
                     # this we need to query the db for the latest index
                     # value.
                     _reading_id = self.__get_reading_id__(True)
-                    a_reading.set_id(_reading_id)
+                    data_object.set_id(_reading_id)
 
                     # insert the reading into the reading table
-                    self.__insert_reading__(a_reading)
+                    self.__insert_reading__(data_object)
                 
-                    if type(a_reading.get_data()) is type(model.Temperature):
+                    if type(data_object.get_data()) is type(model.Temperature):
                         
                         # insert temperature into temperature table
-                        self.__insert_temperature__(a_reading.id, a_reading.get_data())
+                        self.__insert_temperature__(data_object.id, a_reading.get_data())
                     
-                    elif type(a_reading.get_data()) is type(model.Emissivity):
+                    elif type(data_object.get_data()) is type(model.Emissivity):
                         
                         # insert emissivity into emissivity table
-                        self.__insert_emissivity__(a_reading.id, a_reading.get_data())
+                        self.__insert_emissivity__(data_object.id, data_object.get_data())
 
                     # end if
+                else:
+                    print("ERROR: Unsupported data type %s" % type(data_object))
                 # end if
 
                 # pop the record off of the queue

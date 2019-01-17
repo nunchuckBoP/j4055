@@ -186,7 +186,7 @@ class Sensor(object):
         self.series = model.Series(time.time())
 
         # add the series object in the data queue
-        self.db.add_data(self.series)
+        self.db_interface.add_data(self.series)
 
         # reinitialize total_ttr in case this methos
         # gets called more than once
