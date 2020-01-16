@@ -1,7 +1,7 @@
 # main.py modified for counting/timing purposes to main_count.py using I2CSensor_count.py
 # CREATION DATE: 11/28/2018
 # PROGRAM AUTHOR: CJ (CJ@NEECHSOFT.COM)
-# CPU: RASPBERRY PI 3
+# CPU: RASPBERRY PI 3E
 # PROGRAM DESCRIPTION:
 #       THE PROGRAM TAKES READINGS FROM AN IR TEMPERATURE SENSOR
 #       USING A CUSTOM CLASS CALLED SENSOR INSIDE THE I2CSensor
@@ -10,7 +10,7 @@
 #       PROGRAM VARIABLES BELOW: SAMPLE_RATE - time the program will
 #                               wait between readings
 #                               DEVICE_ADDRESS - ADDRESS OF I2C DEVICE (hex)
-#                                                                                          READING_COUNT - NUMBER OF READINGS THE PROGRAM
+#                               READING_COUNT - NUMBER OF READINGS THE PROGRAM
 #                               WILL TAKE
 #
 #       on_data:                This is a callback function for the Sensor
@@ -46,6 +46,7 @@ import time
 # program variables adjustable
 # sample rate in seconds
 SAMPLE_RATE = 0.00001
+#SAMPLE_RATE = 0.25
 
 # device address on i2c bus
 DEVICE_ADDRESS = 0x5a
@@ -134,7 +135,7 @@ if __name__ == '__main__':
         # end while
         print("db thread complete.")
     except KeyboardInterrupt:
-        print("terminating db thread...could take up to 2 minutes for sql connection timeout. Output will appear regaurding thread termination.")
+        print("terminating db thread...could take up to 2 minutes for sql connection timeout. Output will appear regarding thread termination.")
         while db_interface.thread.is_alive():
             db_interface.kill()
             time.sleep(0.1)

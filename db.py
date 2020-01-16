@@ -98,7 +98,6 @@ class Interface(object):
 
     def __insert_series__(self, aSeries):
         sql_command_string = ("INSERT INTO tbl_series (id) VALUES(%s)" % aSeries.get_id())
-        
         self.__execute_sql_command__(sql_command_string, None, False)
     # end __insert_series__()
 
@@ -208,6 +207,9 @@ class Interface(object):
                     _inserted = self.__insert_series__(data_object)
                     
                     if _inserted is None:
+
+                        # print some debug information
+                        print("ERROR: failed to insert record")
 
                         # set the kill it
                         self.running = False
